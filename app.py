@@ -1,15 +1,11 @@
-from datetime import datetime
-import io
-import os
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import os
 
 SYSTEM_USER = "admin"
 SYSTEM_PASSWORD = "Plm753&%#"
 
-st.set_page_config(
-    page_title="מערכת ניהול פרויקטים ודוחות", page_icon="📊", layout="wide"
-)
+st.set_page_config(page_title="מערכת ניהול פרויקטים ודוחות", page_icon="📊", layout="wide")
 
 def check_login():
     if "logged_in" not in st.session_state:
@@ -38,41 +34,39 @@ def check_login():
 if not check_login():
     st.stop()
 
-st.markdown(
-    """
+st.markdown("""
     <style>
     .main, .stSidebar, body, p, h1, h2, h3, h4, h5, h6, span, div {
         direction: rtl !important;
         text-align: right !important;
     }
-    .stApp {
-        background-color: #f8fafc;
-    }
-    h1 {
-        color: #0f766e !important;
-        font-weight: 800 !important;
-    }
+    .stApp { background-color: #f8fafc; }
+    h1, h2, h3 { color: #0f766e !important; font-weight: 800 !important; }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
 st.title("📊 מערכת ניהול תקציב, פרויקטים ודוחות")
 
 EXCEL_FILE = "DATE.xlsx"
 
-try:
-    if os.path.exists(EXCEL_FILE):
+if os.path.exists(EXCEL_FILE):
+    try:
         xls = pd.ExcelFile(EXCEL_FILE)
-        st.success(f"קובץ הנתונים נטען בהצלחה! גיליונות זמינים: {', '.join(xls.sheet_names)}")
+        st.success("✅ קובץ הנתונים מהענן מחובר בהצלחה!")
         
         sheet_choice = st.selectbox("בחר גיליון לצפייה:", xls.sheet_names)
+        
+        # קריאת הגיליון והסרת עמודות וורות לחלוטין
         df = pd.read_excel(xls, sheet_name=sheet_choice)
+        df = df.dropna(how='all', axis=1) # מחיקת עמודות ריקות לחלוטין
+        df = df.loc[:, ~df.columns.str.contains('^Unnamed')] # מחיקת עמודות ללא כותרת
+        
         st.dataframe(df, use_container_width=True)
-    else:
-        st.error(f"הקובץ {EXCEL_FILE} לא נמצא ברפוזיטורי.")
-except Exception as e:
-    st.error(f"שגיאה בטעינת הנתונים: {e}")
+        
+    except Exception as e:
+        st.error(f"שגיאה בניתוח קובץ האקסל: {e}")
+else:
+    st.error(f"הקובץ {EXCEL_FILE} אינו נמצא ברפוזיטורי.")
 
 if st.sidebar.button("🚪 התנתק"):
     st.session_state["logged_in"] = False
