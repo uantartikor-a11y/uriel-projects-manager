@@ -1,6 +1,7 @@
 from datetime import datetime
 import io
 import os
+import urllib.request
 import pandas as pd
 import streamlit as st
 from reportlab.lib import colors
@@ -68,21 +69,21 @@ def fix_hebrew(text):
         fixed_words.append(final_word)
     return ' '.join(fixed_words[::-1])
 
-# רישום בטוח של גופן תומך עברית בסביבת ענן
-PDF_FONT = "Helvetica"
+# ==========================================
+# פתרון קסם לריבועים: הורדה אוטומטית של גופן עברי מהרשת
+# ==========================================
+FONT_PATH = "Heebo-Regular.ttf"
+FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/heebo/Heebo-Regular.ttf"
+PDF_FONT = "Helvetica" # גיבוי למקרה חירום
+
 try:
-    font_paths = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "arial.ttf"
-    ]
-    for path in font_paths:
-        if os.path.exists(path):
-            pdfmetrics.registerFont(TTFont("SafeHebrewFont", path))
-            PDF_FONT = "SafeHebrewFont"
-            break
-except Exception:
-    pass
+    if not os.path.exists(FONT_PATH):
+        urllib.request.urlretrieve(FONT_URL, FONT_PATH)
+    
+    pdfmetrics.registerFont(TTFont("HebrewFont", FONT_PATH))
+    PDF_FONT = "HebrewFont"
+except Exception as e:
+    st.warning("לא ניתן לטעון את הגופן העברי המקוון, ייתכנו שיבושים ב-PDF.")
 
 st.markdown(
     """
@@ -419,7 +420,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
         with col_dl1:
             excel_data = to_excel_download({"פרויקטים": df_projects, "הוצאות": df_expenses})
             st.download_button(
-                label="📥 הורד קובץ Excel מלא (בעברית מלאה)",
+                label="📥 הורד קובץ Excel מלא",
                 data=excel_data,
                 file_name="All_Projects_Report.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -431,7 +432,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
                 doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
                 elements = []
                 styles = getSampleStyleSheet()
-                pdf_style = ParagraphStyle('PDFStyle', parent=styles['Normal'], fontName=PDF_FONT, fontSize=10, alignment=2)
+                pdf_style = ParagraphStyle('PDFStyle', parent=styles['Normal'], fontName=PDF_FONT, fontSize=11, alignment=2)
 
                 elements.append(Paragraph(fix_hebrew("דוח סיכום עסקי כללי"), pdf_style))
                 elements.append(Spacer(1, 10))
@@ -469,7 +470,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
 
             general_pdf_bytes = generate_general_pdf(df_summary)
             st.download_button(
-                label="📄 הורד דוח סיכום PDF בעברית",
+                label="📄 הורד דוח סיכום PDF",
                 data=general_pdf_bytes,
                 file_name="Business_Summary.pdf",
                 mime="application/pdf",
@@ -576,7 +577,7 @@ else:
         single_exp_df = project_expenses.copy()
         proj_excel_bytes = to_excel_download({"פרטי פרויקט": single_proj_df, "הוצאות פרויקט": single_exp_df})
         st.download_button(
-            label="📥 הורד קובץ Excel לפרויקט (בעברית מלאה)",
+            label="📥 הורד קובץ Excel לפרויקט",
             data=proj_excel_bytes,
             file_name=f"Project_{project_code}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -610,7 +611,11 @@ else:
             elements.append(Spacer(1, 15))
 
             elements.append(Paragraph(fix_hebrew("פירוט ספקים והוצאות"), pdf_style))
-            exp_table_data = [[Paragraph(fix_hebrew("סכום (ללא מע\"מ)"), pdf_style), Paragraph(fix_hebrew("ספק / תחום"), pdf_style)]]
+            exp_table_data = [[
+                Paragraph(fix_hebrew("סכום (ללא מע\"מ)"), pdf_style), 
+                Paragraph(fix_hebrew("ספק / תחום"), pdf_style)
+            ]]
+            
             if not exp_df.empty:
                 for _, r in exp_df.iterrows():
                     s_amt = r['סכום']
@@ -640,7 +645,7 @@ else:
 
         proj_pdf_bytes = generate_project_pdf(selected_project_name, project_code, contract_amount, already_paid, remaining_to_pay, total_exp, net_profit, project_expenses)
         st.download_button(
-            label="📄 הורד דוח PDF לפרויקט בעברית",
+            label="📄 הורד דוח PDF",
             data=proj_pdf_bytes,
             file_name=f"Project_{project_code}.pdf",
             mime="application/pdf",
