@@ -69,14 +69,20 @@ def fix_hebrew(text):
         fixed_words.append(final_word)
     return ' '.join(fixed_words[::-1])
 
-# רישום גופן עברית תומך ל־PDF
+# טעינה בטוחה של גופן עברי נתמך ל־PDF
 PDF_FONT = "Helvetica"
 try:
-    font_path = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Fonts\\arial.ttf")
-    if not os.path.exists(font_path):
-        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-    pdfmetrics.registerFont(TTFont("HebrewArial", font_path))
-    PDF_FONT = "HebrewArial"
+    # נתיבי גופנים נפוצים בלינוקס/ענן
+    linux_fonts = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/msttcorefonts/arial.ttf"
+    ]
+    for font_p in linux_fonts:
+        if os.path.exists(font_p):
+            pdfmetrics.registerFont(TTFont("HebrewFont", font_p))
+            PDF_FONT = "HebrewFont"
+            break
 except Exception:
     pass
 
@@ -436,8 +442,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
                     parent=styles['Normal'], 
                     fontName=PDF_FONT, 
                     fontSize=10, 
-                    alignment=TA_RIGHT,
-                    wordWrap='RTL'
+                    alignment=TA_RIGHT
                 )
 
                 elements.append(Paragraph(fix_hebrew("דוח סיכום עסקי כללי"), hebrew_style))
@@ -647,8 +652,7 @@ else:
                 parent=styles['Normal'], 
                 fontName=PDF_FONT, 
                 fontSize=11, 
-                alignment=TA_RIGHT,
-                wordWrap='RTL'
+                alignment=TA_RIGHT
             )
 
             elements.append(Paragraph(fix_hebrew(f"דוח פרויקט: {p_name}"), hebrew_style))
