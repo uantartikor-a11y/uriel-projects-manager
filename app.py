@@ -7,11 +7,11 @@ st.set_page_config(page_title="ניהול פרויקטים", page_icon="📊", l
 st.title("📊 מערכת ניהול תקציב, פרויקטים ודוחות")
 
 try:
-    EXCEL_FILE = "פרויקטים אוריאל אלמוג.xlsx"
+    EXCEL_FILE = "DATE.xlsx"
     xls = pd.ExcelFile(EXCEL_FILE)
-    st.success(f"הקובץ נטען! גיליונות: {xls.sheet_names}")
+    st.success(f"הקובץ נטען בהצלחה! גיליונות: {xls.sheet_names}")
     
-    sheet_choice = st.selectbox("בחר גיליון:", xls.sheet_names)
+    sheet_choice = st.selectbox("בחר גיליון לצפייה:", xls.sheet_names)
     df = pd.read_excel(xls, sheet_name=sheet_choice)
     st.dataframe(df, use_container_width=True)
 except Exception as e:
