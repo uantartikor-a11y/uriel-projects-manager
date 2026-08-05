@@ -57,7 +57,7 @@ st.markdown(
 
 st.title("📊 מערכת ניהול תקציב, פרויקטים ודוחות")
 
-EXCEL_FILE = "DATA.xlsx"
+EXCEL_FILE = "DATE.xlsx"
 
 def load_data():
     if not os.path.exists(EXCEL_FILE):
