@@ -68,12 +68,19 @@ def fix_hebrew(text):
         fixed_words.append(final_word)
     return ' '.join(fixed_words[::-1])
 
-# טעינה בטוחה של הגופן העברי עבור PDF
+# רישום בטוח של גופן תומך עברית בסביבת ענן
+PDF_FONT = "Helvetica"
 try:
-    font_path = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Fonts\\arial.ttf")
-    if not os.path.exists(font_path):
-        font_path = "arial.ttf"
-    pdfmetrics.registerFont(TTFont("HebrewArial", font_path))
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "arial.ttf"
+    ]
+    for path in font_paths:
+        if os.path.exists(path):
+            pdfmetrics.registerFont(TTFont("SafeHebrewFont", path))
+            PDF_FONT = "SafeHebrewFont"
+            break
 except Exception:
     pass
 
@@ -424,21 +431,26 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
                 doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
                 elements = []
                 styles = getSampleStyleSheet()
-                hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName='HebrewArial', fontSize=10, alignment=2)
+                pdf_style = ParagraphStyle('PDFStyle', parent=styles['Normal'], fontName=PDF_FONT, fontSize=10, alignment=2)
 
-                elements.append(Paragraph(fix_hebrew("דוח סיכום עסקי כללי"), hebrew_style))
+                elements.append(Paragraph(fix_hebrew("דוח סיכום עסקי כללי"), pdf_style))
                 elements.append(Spacer(1, 10))
 
-                table_data = [[fix_hebrew("שם פרויקט"), fix_hebrew("חוזה"), fix_hebrew("הוצאות"), fix_hebrew("רווח נקי")]]
+                table_data = [[
+                    Paragraph(fix_hebrew("רווח נקי"), pdf_style),
+                    Paragraph(fix_hebrew("הוצאות"), pdf_style),
+                    Paragraph(fix_hebrew("חוזה"), pdf_style),
+                    Paragraph(fix_hebrew("שם פרויקט"), pdf_style)
+                ]]
                 for _, row in df.iterrows():
                     c_val = row['סכום חוזה (ללא מע"מ)']
                     e_val = row['סה"כ הוצאות']
                     n_val = row['רווח נקי']
                     table_data.append([
-                        Paragraph(fix_hebrew(str(row["שם פרויקט"])), hebrew_style),
-                        Paragraph(f"{c_val:,.0f}", hebrew_style),
-                        Paragraph(f"{e_val:,.0f}", hebrew_style),
-                        Paragraph(f"{n_val:,.0f}", hebrew_style),
+                        Paragraph(f"{n_val:,.0f}", pdf_style),
+                        Paragraph(f"{e_val:,.0f}", pdf_style),
+                        Paragraph(f"{c_val:,.0f}", pdf_style),
+                        Paragraph(fix_hebrew(str(row["שם פרויקט"])), pdf_style),
                     ])
 
                 t = Table(table_data)
@@ -446,7 +458,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                     ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                    ("FONTNAME", (0, 0), (-1, -1), "HebrewArial"),
+                    ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
                     ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#94a3b8")),
                 ]))
@@ -576,41 +588,41 @@ else:
             doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
             elements = []
             styles = getSampleStyleSheet()
-            hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName='HebrewArial', fontSize=11, alignment=2)
+            pdf_style = ParagraphStyle('PDFStyle', parent=styles['Normal'], fontName=PDF_FONT, fontSize=11, alignment=2)
 
-            elements.append(Paragraph(fix_hebrew("דוח פרויקט: " + p_name), hebrew_style))
+            elements.append(Paragraph(fix_hebrew("דוח פרויקט: " + str(p_name)), pdf_style))
             elements.append(Spacer(1, 10))
 
             summary_table_data = [
-                [Paragraph(f"{c_amt:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("סכום חוזה"), hebrew_style)],
-                [Paragraph(f"{paid_amt:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("תקבולים בפועל"), hebrew_style)],
-                [Paragraph(f"{rem_pay:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("יתרה לתשלום (כולל מע\"מ)"), hebrew_style)],
-                [Paragraph(f"{tot_ex:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("סה\"כ הוצאות"), hebrew_style)],
-                [Paragraph(f"{prof:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("רווח נקי"), hebrew_style)],
+                [Paragraph(f"{c_amt:,.0f} ₪", pdf_style), Paragraph(fix_hebrew("סכום חוזה"), pdf_style)],
+                [Paragraph(f"{paid_amt:,.0f} ₪", pdf_style), Paragraph(fix_hebrew("תקבולים בפועל"), pdf_style)],
+                [Paragraph(f"{rem_pay:,.0f} ₪", pdf_style), Paragraph(fix_hebrew("יתרה לתשלום (כולל מע\"מ)"), pdf_style)],
+                [Paragraph(f"{tot_ex:,.0f} ₪", pdf_style), Paragraph(fix_hebrew("סה\"כ הוצאות"), pdf_style)],
+                [Paragraph(f"{prof:,.0f} ₪", pdf_style), Paragraph(fix_hebrew("רווח נקי"), pdf_style)],
             ]
             t_sum = Table(summary_table_data)
             t_sum.setStyle(TableStyle([
                 ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                ("FONTNAME", (0, 0), (-1, -1), "HebrewArial"),
+                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
             ]))
             elements.append(t_sum)
             elements.append(Spacer(1, 15))
 
-            elements.append(Paragraph(fix_hebrew("פירוט ספקים והוצאות"), hebrew_style))
-            exp_table_data = [[Paragraph(fix_hebrew("סכום (ללא מע\"מ)"), hebrew_style), Paragraph(fix_hebrew("ספק / תחום"), hebrew_style)]]
+            elements.append(Paragraph(fix_hebrew("פירוט ספקים והוצאות"), pdf_style))
+            exp_table_data = [[Paragraph(fix_hebrew("סכום (ללא מע\"מ)"), pdf_style), Paragraph(fix_hebrew("ספק / תחום"), pdf_style)]]
             if not exp_df.empty:
                 for _, r in exp_df.iterrows():
                     s_amt = r['סכום']
                     s_name = str(r["ספק / תחום"])
                     exp_table_data.append([
-                        Paragraph(f"{s_amt:,.0f} ₪", hebrew_style),
-                        Paragraph(fix_hebrew(s_name), hebrew_style)
+                        Paragraph(f"{s_amt:,.0f} ₪", pdf_style),
+                        Paragraph(fix_hebrew(s_name), pdf_style)
                     ])
             else:
                 exp_table_data.append([
-                    Paragraph("-", hebrew_style),
-                    Paragraph(fix_hebrew("אין הוצאות רשומות"), hebrew_style)
+                    Paragraph("-", pdf_style),
+                    Paragraph(fix_hebrew("אין הוצאות רשומות"), pdf_style)
                 ])
 
             t_exp = Table(exp_table_data)
@@ -618,7 +630,7 @@ else:
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                ("FONTNAME", (0, 0), (-1, -1), "HebrewArial"),
+                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
                 ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#0f172a")),
             ]))
             elements.append(t_exp)
