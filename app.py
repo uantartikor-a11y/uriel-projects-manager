@@ -1,7 +1,8 @@
 from datetime import datetime
 import io
 import os
-import urllib.request
+import tempfile
+import requests
 import pandas as pd
 import streamlit as st
 from reportlab.lib import colors
@@ -70,24 +71,27 @@ def fix_hebrew(text):
     return ' '.join(fixed_words[::-1])
 
 # ==========================================
-# מנגנון הורדת פונט עוצמתי (עוקף חסימות ענן)
+# פתרון מקצועי לחסימות ענן: שמירה בתיקייה זמנית 
 # ==========================================
-PDF_FONT = "Helvetica" # גיבוי חירום
-FONT_PATH = "Heebo-Regular.ttf"
-FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/heebo/Heebo-Regular.ttf"
+PDF_FONT = "Helvetica" # גיבוי למקרה חירום
 
 try:
+    # נתיב לתיקיית הקבצים הזמניים של שרת הלינוקס שפתוחה לכתיבה
+    FONT_PATH = os.path.join(tempfile.gettempdir(), "Heebo-Regular.ttf")
+    FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/heebo/Heebo-Regular.ttf"
+
     if not os.path.exists(FONT_PATH):
-        # מתחזים לדפדפן כדי שהורדת הפונט לא תיחסם
-        req = urllib.request.Request(FONT_URL, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-        with urllib.request.urlopen(req, timeout=15) as response, open(FONT_PATH, 'wb') as out_file:
-            out_file.write(response.read())
-            
+        # שימוש ב-requests העוצמתי במקום urllib
+        response = requests.get(FONT_URL, timeout=15)
+        if response.status_code == 200:
+            with open(FONT_PATH, 'wb') as f:
+                f.write(response.content)
+
     if os.path.exists(FONT_PATH):
         pdfmetrics.registerFont(TTFont("HebrewFont", FONT_PATH))
         PDF_FONT = "HebrewFont"
 except Exception as e:
-    st.warning("שגיאה בטעינת הפונט. ה-PDF עשוי להיות באנגלית בלבד.")
+    st.warning(f"שגיאה בטעינת הפונט (הרשאות ענן): {e}")
 
 st.markdown(
     """
@@ -474,7 +478,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
 
             general_pdf_bytes = generate_general_pdf(df_summary)
             st.download_button(
-                label="📄 הורד דוח סיכום PDF",
+                label="📄 הורד דוח סיכום PDF בעברית",
                 data=general_pdf_bytes,
                 file_name="Business_Summary.pdf",
                 mime="application/pdf",
@@ -649,7 +653,7 @@ else:
 
         proj_pdf_bytes = generate_project_pdf(selected_project_name, project_code, contract_amount, already_paid, remaining_to_pay, total_exp, net_profit, project_expenses)
         st.download_button(
-            label="📄 הורד דוח PDF",
+            label="📄 הורד דוח PDF בעברית",
             data=proj_pdf_bytes,
             file_name=f"Project_{project_code}.pdf",
             mime="application/pdf",
