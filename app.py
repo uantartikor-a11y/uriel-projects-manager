@@ -143,7 +143,7 @@ st.title("📊 מערכת ניהול תקציב, פרויקטים ודוחות")
 st.markdown("ניהול חוזים, תשלומים, יתרות, ספקים, מע\"מ (18%) והפקדת דוחות PDF/Excel.")
 
 EXCEL_FILE = "projects_data.xlsx"
-ORIGINAL_EXCEL = "פרויקטים אוריאל אלמוג.xlsx"
+ORIGINAL_EXCEL = "DATE.xlsx"
 
 def load_data():
     if not os.path.exists(EXCEL_FILE) and os.path.exists(ORIGINAL_EXCEL):
