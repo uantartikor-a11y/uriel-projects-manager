@@ -68,9 +68,13 @@ def fix_hebrew(text):
         fixed_words.append(final_word)
     return ' '.join(fixed_words[::-1])
 
+# רישום גופן בטוח
+font_name = "Helvetica"
 try:
     font_path = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Fonts\\arial.ttf")
-    pdfmetrics.registerFont(TTFont("HebrewArial", font_path))
+    if os.path.exists(font_path):
+        pdfmetrics.registerFont(TTFont("HebrewArial", font_path))
+        font_name = "HebrewArial"
 except Exception:
     pass
 
@@ -311,8 +315,8 @@ with st.sidebar.form("new_project_form"):
     st.subheader("➕ הוספת פרויקט / מכרז חדש")
     new_p_code = st.text_input("קוד פרויקט (למשל: PRJ-018)")
     new_p_name = st.text_input("שם פרויקט")
-    new_p_amount = st.number_input("סכום חוזה (ללא מע\"מ)", min_value=0.0, step=1000.0)
-    new_p_paid = st.number_input("תקבולים בפועל (ללא מע\"מ)", min_value=0.0, step=1000.0)
+    new_p_amount = st.number_input("סכום חוזה (ללא מע״מ)", min_value=0.0, step=1000.0)
+    new_p_paid = st.number_input("תקבולים בפועל (ללא מע״מ)", min_value=0.0, step=1000.0)
     new_p_status = st.selectbox(
         "סטטוס התחלתי:", ["מכרז", "בביצוע", "מעוכב", "בבדיקה", "נמסר", "סגור"]
     )
@@ -421,7 +425,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
                 doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
                 elements = []
                 styles = getSampleStyleSheet()
-                hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName='HebrewArial', fontSize=10, alignment=2)
+                hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName=font_name, fontSize=10, alignment=2)
 
                 elements.append(Paragraph(fix_hebrew("דוח סיכום עסקי כללי"), hebrew_style))
                 elements.append(Spacer(1, 10))
@@ -448,7 +452,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                     ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("FONTNAME", (0, 0), (-1, -1), "HebrewArial"),
+                    ("FONTNAME", (0, 0), (-1, -1), font_name),
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
                     ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#94a3b8")),
                 ]))
@@ -578,7 +582,7 @@ else:
             doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
             elements = []
             styles = getSampleStyleSheet()
-            hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName='HebrewArial', fontSize=11, alignment=2)
+            hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName=font_name, fontSize=11, alignment=2)
 
             elements.append(Paragraph(fix_hebrew(f"דוח פרויקט: {p_name}"), hebrew_style))
             elements.append(Spacer(1, 10))
@@ -593,7 +597,7 @@ else:
             t_sum = Table(summary_table_data)
             t_sum.setStyle(TableStyle([
                 ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                ("FONTNAME", (0, 0), (-1, -1), "HebrewArial"),
+                ("FONTNAME", (0, 0), (-1, -1), font_name),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
             ]))
             elements.append(t_sum)
@@ -612,7 +616,7 @@ else:
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
                 ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                ("FONTNAME", (0, 0), (-1, -1), "HebrewArial"),
+                ("FONTNAME", (0, 0), (-1, -1), font_name),
                 ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#0f172a")),
             ]))
             elements.append(t_exp)
