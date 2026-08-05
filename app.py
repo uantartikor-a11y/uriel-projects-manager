@@ -19,4 +19,4 @@ if os.path.exists(EXCEL_FILE):
     except Exception as e:
         st.error(f"שגיאה בקריאת קובץ האקסל: {e}")
 else:
-    st.error(f"קובץ האקסל '{EXCEL_FILE5}' לא נמצא ברפוזיטורי. ודא שהשלו שמו מופיע בדיוק כמו שצריך.")
+    st.error(f"קובץ האקסל '{EXCEL_FILE}' לא נמצא ברפוזיטורי. ודא ששמו מופיע בדיוק כמו שצריך.")
