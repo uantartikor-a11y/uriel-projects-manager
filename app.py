@@ -71,27 +71,30 @@ def fix_hebrew(text):
     return ' '.join(fixed_words[::-1])
 
 # ==========================================
-# פתרון מקצועי לחסימות ענן: שמירה בתיקייה זמנית 
+# פתרון סופי: קישור מאומת לגופן תומך עברית (DejaVuSans)
 # ==========================================
-PDF_FONT = "Helvetica" # גיבוי למקרה חירום
+PDF_FONT = "Helvetica" # גיבוי
 
 try:
-    # נתיב לתיקיית הקבצים הזמניים של שרת הלינוקס שפתוחה לכתיבה
-    FONT_PATH = os.path.join(tempfile.gettempdir(), "Heebo-Regular.ttf")
-    FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/heebo/Heebo-Regular.ttf"
-
+    FONT_URL = "https://raw.githubusercontent.com/dejavu-fonts/dejavu-fonts/master/ttf/DejaVuSans.ttf"
+    FONT_PATH = os.path.join(tempfile.gettempdir(), "DejaVuSans.ttf")
+    
     if not os.path.exists(FONT_PATH):
-        # שימוש ב-requests העוצמתי במקום urllib
-        response = requests.get(FONT_URL, timeout=15)
-        if response.status_code == 200:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        res = requests.get(FONT_URL, headers=headers, timeout=15)
+        if res.status_code == 200:
             with open(FONT_PATH, 'wb') as f:
-                f.write(response.content)
-
+                f.write(res.content)
+        else:
+            st.error(f"שגיאה בהורדת הגופן: קיבלנו קוד שגיאה {res.status_code} מהשרת.")
+            
     if os.path.exists(FONT_PATH):
         pdfmetrics.registerFont(TTFont("HebrewFont", FONT_PATH))
         PDF_FONT = "HebrewFont"
+    else:
+        st.error("קובץ הגופן לא נוצר בשרת למרות ניסיון ההורדה.")
 except Exception as e:
-    st.warning(f"שגיאה בטעינת הפונט (הרשאות ענן): {e}")
+    st.error(f"שגיאה מערכתית בטעינת הגופן: {e}")
 
 st.markdown(
     """
