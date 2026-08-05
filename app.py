@@ -9,6 +9,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_RIGHT
 
 SYSTEM_USER = "admin"
 SYSTEM_PASSWORD = "Plm753&%#"
@@ -68,13 +69,14 @@ def fix_hebrew(text):
         fixed_words.append(final_word)
     return ' '.join(fixed_words[::-1])
 
-# הגדרת גופן בטוח ל־PDF
+# רישום גופן עברית תומך ל־PDF
 PDF_FONT = "Helvetica"
 try:
     font_path = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Fonts\\arial.ttf")
-    if os.path.exists(font_path):
-        pdfmetrics.registerFont(TTFont("HebrewArial", font_path))
-        PDF_FONT = "HebrewArial"
+    if not os.path.exists(font_path):
+        font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    pdfmetrics.registerFont(TTFont("HebrewArial", font_path))
+    PDF_FONT = "HebrewArial"
 except Exception:
     pass
 
@@ -277,6 +279,10 @@ def load_data():
         df_projects["תאריך סגירה"] = df_projects["תאריך סגירה"].fillna("").astype(str)
     if "שולם בפועל" not in df_projects.columns:
         df_projects["שולם בפועל"] = 0.0
+    if "ספק / תחום" not in df_expenses.columns:
+        df_expenses["ספק / תחום"] = ""
+    if "סכום" not in df_expenses.columns:
+        df_expenses["סכום"] = 0.0
 
     return df_projects, df_expenses
 
@@ -425,28 +431,41 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
                 doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
                 elements = []
                 styles = getSampleStyleSheet()
-                hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName=PDF_FONT, fontSize=10, alignment=2)
+                hebrew_style = ParagraphStyle(
+                    'HebrewStyle', 
+                    parent=styles['Normal'], 
+                    fontName=PDF_FONT, 
+                    fontSize=10, 
+                    alignment=TA_RIGHT,
+                    wordWrap='RTL'
+                )
 
                 elements.append(Paragraph(fix_hebrew("דוח סיכום עסקי כללי"), hebrew_style))
                 elements.append(Spacer(1, 10))
 
-                table_data = [[fix_hebrew("שם פרויקט"), fix_hebrew("חוזה"), fix_hebrew("הוצאות"), fix_hebrew("רווח נקי")]]
+                table_data = [[
+                    Paragraph(fix_hebrew("רווח נקי"), hebrew_style),
+                    Paragraph(fix_hebrew("הוצאות"), hebrew_style),
+                    Paragraph(fix_hebrew("חוזה"), hebrew_style),
+                    Paragraph(fix_hebrew("שם פרויקט"), hebrew_style)
+                ]]
+                
                 for _, row in df.iterrows():
                     contract_val = row['סכום חוזה (ללא מע"מ)']
                     exp_val = row['סה"כ הוצאות']
                     profit_val = row['רווח נקי']
                     table_data.append([
-                        fix_hebrew(str(row["שם פרויקט"])),
-                        f"{contract_val:,.0f}",
-                        f"{exp_val:,.0f}",
-                        f"{profit_val:,.0f}",
+                        Paragraph(f"{profit_val:,.0f}", hebrew_style),
+                        Paragraph(f"{exp_val:,.0f}", hebrew_style),
+                        Paragraph(f"{contract_val:,.0f}", hebrew_style),
+                        Paragraph(fix_hebrew(str(row["שם פרויקט"])), hebrew_style),
                     ])
 
                 t = Table(table_data)
                 t.setStyle(TableStyle([
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
                     ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
                     ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
                     ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#94a3b8")),
@@ -557,6 +576,52 @@ else:
                 st.success("הפרויקט נמחק בהצלחה!")
                 st.rerun()
 
+    st.divider()
+
+    with st.form(f"add_expense_form_{project_code}"):
+        st.subheader("➕ הוספת ספק / הוצאה חדשה לפרויקט")
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+            new_exp_supplier = st.text_input("שם ספק / תחום הוצאה:")
+        with col_e2:
+            new_exp_amount = st.number_input("סכום (ללא מע\"מ):", min_value=0.0, step=500.0)
+        
+        add_exp_btn = st.form_submit_button("הוסף הוצאה")
+        if add_exp_btn and new_exp_supplier and new_exp_amount > 0:
+            new_exp_row = pd.DataFrame([{
+                "קוד פרויקט": project_code,
+                "ספק / תחום": new_exp_supplier.strip(),
+                "סכום": float(new_exp_amount)
+            }])
+            df_expenses = pd.concat([df_expenses, new_exp_row], ignore_index=True)
+            with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
+                df_projects.to_excel(writer, sheet_name="פרויקטים", index=False)
+                df_expenses.to_excel(writer, sheet_name="הוצאות", index=False)
+            st.success(f"הספק '{new_exp_supplier}' נוסף בהצלחה!")
+            st.rerun()
+
+    st.divider()
+
+    st.subheader(f"📋 פירוט הוצאות וספקים עבור: {selected_project_name}")
+    project_expenses = df_expenses[df_expenses["קוד פרויקט"] == project_code]
+    if not project_expenses.empty:
+        for exp_idx, row in project_expenses.iterrows():
+            col_row_info, col_row_del = st.columns([4, 1])
+            with col_row_info:
+                st.markdown(f"🔹 **{row['ספק / תחום']}** | סכום: {row['סכום']:,.0f} ₪")
+            with col_row_del:
+                if st.button("🗑️ מחיקה", key=f"del_exp_{exp_idx}"):
+                    df_expenses = df_expenses.drop(exp_idx)
+                    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
+                        df_projects.to_excel(writer, sheet_name="פרויקטים", index=False)
+                        df_expenses.to_excel(writer, sheet_name="הוצאות", index=False)
+                    st.success("ההוצאה נמחקה בהצלחה!")
+                    st.rerun()
+    else:
+        st.info("עדיין אין הוצאות רשומות בפרויקט זה.")
+
+    st.divider()
+
     st.subheader(f"📥 הפקת דוחות עבור פרויקט: {selected_project_name}")
     col_p_dl1, col_p_dl2 = st.columns(2)
 
@@ -577,17 +642,24 @@ else:
             doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
             elements = []
             styles = getSampleStyleSheet()
-            hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName=PDF_FONT, fontSize=11, alignment=2)
+            hebrew_style = ParagraphStyle(
+                'HebrewStyle', 
+                parent=styles['Normal'], 
+                fontName=PDF_FONT, 
+                fontSize=11, 
+                alignment=TA_RIGHT,
+                wordWrap='RTL'
+            )
 
             elements.append(Paragraph(fix_hebrew(f"דוח פרויקט: {p_name}"), hebrew_style))
             elements.append(Spacer(1, 10))
 
             summary_table_data = [
-                [fix_hebrew("סכום חוזה"), f"{c_amt:,.0f} ₪"],
-                [fix_hebrew("תקבולים בפועל"), f"{paid_amt:,.0f} ₪"],
-                [fix_hebrew("יתרה לתשלום (כולל מע\"מ)"), f"{rem_pay:,.0f} ₪"],
-                [fix_hebrew("סה\"כ הוצאות"), f"{tot_ex:,.0f} ₪"],
-                [fix_hebrew("רווח נקי"), f"{prof:,.0f} ₪"],
+                [Paragraph(f"{c_amt:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("סכום חוזה"), hebrew_style)],
+                [Paragraph(f"{paid_amt:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("תקבולים בפועל"), hebrew_style)],
+                [Paragraph(f"{rem_pay:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("יתרה לתשלום (כולל מע\"מ)"), hebrew_style)],
+                [Paragraph(f"{tot_ex:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("סה\"כ הוצאות"), hebrew_style)],
+                [Paragraph(f"{prof:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("רווח נקי"), hebrew_style)],
             ]
             t_sum = Table(summary_table_data)
             t_sum.setStyle(TableStyle([
@@ -599,12 +671,21 @@ else:
             elements.append(Spacer(1, 15))
 
             elements.append(Paragraph(fix_hebrew("פירוט ספקים והוצאות"), hebrew_style))
-            exp_table_data = [[fix_hebrew("ספק / תחום"), fix_hebrew("סכום (ללא מע\"מ)")]]
+            exp_table_data = [[
+                Paragraph(fix_hebrew("סכום (ללא מע\"מ)"), hebrew_style),
+                Paragraph(fix_hebrew("ספק / תחום"), hebrew_style)
+            ]]
             if not exp_df.empty:
                 for _, r in exp_df.iterrows():
-                    exp_table_data.append([fix_hebrew(str(r["ספק / תחום"])), f"{r['סכום']:,.0f} ₪"])
+                    exp_table_data.append([
+                        Paragraph(f"{r['סכום']:,.0f} ₪", hebrew_style),
+                        Paragraph(fix_hebrew(str(r["ספק / תחום"])), hebrew_style)
+                    ])
             else:
-                exp_table_data.append([fix_hebrew("אין הוצאות רשומות"), "-"])
+                exp_table_data.append([
+                    Paragraph("-", hebrew_style),
+                    Paragraph(fix_hebrew("אין הוצאות רשומות"), hebrew_style)
+                ])
 
             t_exp = Table(exp_table_data)
             t_exp.setStyle(TableStyle([
@@ -626,22 +707,3 @@ else:
             file_name=f"Project_{project_code}.pdf",
             mime="application/pdf",
         )
-
-    st.divider()
-
-    st.subheader(f"📋 פירוט הוצאות ספקים עבור: {selected_project_name}")
-    if not project_expenses.empty:
-        for exp_idx, row in project_expenses.iterrows():
-            col_row_info, col_row_del = st.columns([4, 1])
-            with col_row_info:
-                st.markdown(f"🔹 **{row['ספק / תחום']}** | סכום: {row['סכום']:,.0f} ₪")
-            with col_row_del:
-                if st.button("🗑️ מחיקה", key=f"del_exp_{exp_idx}"):
-                    df_expenses = df_expenses.drop(exp_idx)
-                    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
-                        df_projects.to_excel(writer, sheet_name="פרויקטים", index=False)
-                        df_expenses.to_excel(writer, sheet_name="הוצאות", index=False)
-                    st.success("ההוצאה נמחקה בהצלחה!")
-                    st.rerun()
-    else:
-        st.info("עדיין אין הוצאות רשומות בפרויקט זה.")
