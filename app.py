@@ -3,6 +3,7 @@ import io
 import os
 import pandas as pd
 import streamlit as st
+from fpdf import FPDF
 
 SYSTEM_USER = "admin"
 SYSTEM_PASSWORD = "Plm753&%#"
@@ -101,7 +102,7 @@ st.markdown(
 )
 
 st.title("📊 מערכת ניהול תקציב, פרויקטים ודוחות")
-st.markdown("ניהול חוזים, תשלומים, יתרות, ספקים, מע\"מ (18%) והפקת דוחות Excel מקצועיים.")
+st.markdown("ניהול חוזים, תשלומים, יתרות, ספקים, מע\"מ (18%) והפקדת דוחות PDF/Excel.")
 
 EXCEL_FILE = "projects_data.xlsx"
 ORIGINAL_EXCEL = "DATE.xlsx"
@@ -260,6 +261,38 @@ def to_excel_download(df_dict):
     output.seek(0)
     return output.getvalue()
 
+# פונקציית ייצור PDF מותאמת אישית באמצעות FPDF2
+class PDF(FPDF):
+    def header(self):
+        self.set_font("helvetica", "B", 14)
+        self.cell(0, 10, "Project Management Report", 0, 1, "C")
+        self.ln(5)
+
+def generate_pdf_report(proj_name, c_amt, paid_amt, rem_pay, tot_ex, prof, exp_df):
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_font("helvetica", size=12)
+    
+    pdf.cell(0, 10, f"Project: {proj_name}", 0, 1, "R")
+    pdf.cell(0, 10, f"Contract Amount: {c_amt:,.0f} NIS", 0, 1, "R")
+    pdf.cell(0, 10, f"Paid Amount: {paid_amt:,.0f} NIS", 0, 1, "R")
+    pdf.cell(0, 10, f"Remaining (Inc. VAT): {rem_pay:,.0f} NIS", 0, 1, "R")
+    pdf.cell(0, 10, f"Total Expenses: {tot_ex:,.0f} NIS", 0, 1, "R")
+    pdf.cell(0, 10, f"Net Profit: {prof:,.0f} NIS", 0, 1, "R")
+    pdf.ln(10)
+    
+    pdf.set_font("helvetica", "B", 12)
+    pdf.cell(0, 10, "Expenses Breakdown:", 0, 1, "R")
+    pdf.set_font("helvetica", size=10)
+    
+    if not exp_df.empty:
+        for _, r in exp_df.iterrows():
+            pdf.cell(0, 8, f"{r['ספק / תחום']}: {r['סכום']:,.0f} NIS", 0, 1, "R")
+    else:
+        pdf.cell(0, 8, "No expenses recorded.", 0, 1, "R")
+        
+    return pdf.output()
+
 st.sidebar.header("📁 ניהול מערכת")
 
 if st.sidebar.button("🚪 התנתק מהמערכת"):
@@ -375,7 +408,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
         
         excel_data = to_excel_download({"סיכום פרויקטים": df_summary, "כל ההוצאות": df_expenses})
         st.download_button(
-            label="📥 הורד דוח Excel עסקי מלא (בעברית מושלמת)",
+            label="📥 הורד דוח Excel עסקי מלא",
             data=excel_data,
             file_name="Business_Summary_Report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -512,7 +545,7 @@ else:
                     df_expenses = df_expenses.drop(exp_idx)
                     with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
                         df_projects.to_excel(writer, sheet_name="פרויקטים", index=False)
-                        df_expenses.to_excel(writer, sheet_name="הוצאות", index=False)
+                        df_expenses.to_excel(writer, sheet_name="הוצאות", index=ExcelWriter if 'ExcelWriter' in globals() else "openpyxl")
                     st.success("ההוצאה נמחקה בהצלחה!")
                     st.rerun()
     else:
@@ -520,13 +553,25 @@ else:
 
     st.divider()
 
-    st.subheader(f"📥 הפקת דוח פרויקט")
-    single_proj_df = df_projects[df_projects["קוד פרויקט"] == project_code]
-    single_exp_df = project_expenses.copy()
-    proj_excel_bytes = to_excel_download({"פרטי פרויקט": single_proj_df, "הוצאות פרויקט": single_exp_df})
-    st.download_button(
-        label="📥 הורד קובץ Excel לפרויקט (בעברית מושלמת)",
-        data=proj_excel_bytes,
-        file_name=f"Project_{project_code}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+    st.subheader(f"📥 הפקת דוחות")
+    col_p_dl1, col_p_dl2 = st.columns(2)
+    
+    with col_p_dl1:
+        single_proj_df = df_projects[df_projects["קוד פרויקט"] == project_code]
+        single_exp_df = project_expenses.copy()
+        proj_excel_bytes = to_excel_download({"פרטי פרויקט": single_proj_df, "הוצאות פרויקט": single_exp_df})
+        st.download_button(
+            label="📥 הורד קובץ Excel לפרויקט",
+            data=proj_excel_bytes,
+            file_name=f"Project_{project_code}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    with col_p_dl2:
+        pdf_data = generate_pdf_report(selected_project_name, contract_amount, already_paid, remaining_to_pay, total_exp, net_profit, project_expenses)
+        st.download_button(
+            label="📄 הורד דוח PDF לפרויקט",
+            data=pdf_data,
+            file_name=f"Project_{project_code}.pdf",
+            mime="application/pdf",
+        )
