@@ -69,20 +69,12 @@ def fix_hebrew(text):
         fixed_words.append(final_word)
     return ' '.join(fixed_words[::-1])
 
-# טעינה בטוחה של גופן עברי נתמך ל־PDF
+# טעינת קובץ גופן Arial ישירות מהתיקייה ב־GitHub
 PDF_FONT = "Helvetica"
 try:
-    # נתיבי גופנים נפוצים בלינוקס/ענן
-    linux_fonts = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-        "/usr/share/fonts/truetype/msttcorefonts/arial.ttf"
-    ]
-    for font_p in linux_fonts:
-        if os.path.exists(font_p):
-            pdfmetrics.registerFont(TTFont("HebrewFont", font_p))
-            PDF_FONT = "HebrewFont"
-            break
+    if os.path.exists("arial.ttf"):
+        pdfmetrics.registerFont(TTFont("HebrewArial", "arial.ttf"))
+        PDF_FONT = "HebrewArial"
 except Exception:
     pass
 
