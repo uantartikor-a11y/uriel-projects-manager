@@ -1,7 +1,6 @@
 from datetime import datetime
 import io
 import os
-import urllib.request
 import pandas as pd
 import streamlit as st
 from reportlab.lib import colors
@@ -70,20 +69,19 @@ def fix_hebrew(text):
     return ' '.join(fixed_words[::-1])
 
 # ==========================================
-# פתרון קסם לריבועים: הורדה אוטומטית של גופן עברי מהרשת
+# טעינת הגופן המקומית ב-100% יציבות
 # ==========================================
+PDF_FONT = "Helvetica" # גיבוי חירום
 FONT_PATH = "Heebo-Regular.ttf"
-FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/heebo/Heebo-Regular.ttf"
-PDF_FONT = "Helvetica" # גיבוי למקרה חירום
 
 try:
-    if not os.path.exists(FONT_PATH):
-        urllib.request.urlretrieve(FONT_URL, FONT_PATH)
-    
-    pdfmetrics.registerFont(TTFont("HebrewFont", FONT_PATH))
-    PDF_FONT = "HebrewFont"
+    if os.path.exists(FONT_PATH):
+        pdfmetrics.registerFont(TTFont("HebrewFont", FONT_PATH))
+        PDF_FONT = "HebrewFont"
+    else:
+        st.warning("⚠️ קובץ הגופן Heebo-Regular.ttf חסר בגיטהאב. ה-PDF יוצג ללא עברית עד שיועלה.")
 except Exception as e:
-    st.warning("לא ניתן לטעון את הגופן העברי המקוון, ייתכנו שיבושים ב-PDF.")
+    pass
 
 st.markdown(
     """
