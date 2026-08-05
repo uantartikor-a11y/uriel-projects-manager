@@ -3,13 +3,6 @@ import io
 import os
 import pandas as pd
 import streamlit as st
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_RIGHT
 
 SYSTEM_USER = "admin"
 SYSTEM_PASSWORD = "Plm753&%#"
@@ -44,39 +37,6 @@ def check_login():
 
 if not check_login():
     st.stop()
-
-def fix_hebrew(text):
-    if not isinstance(text, str):
-        return str(text)
-    words = text.split(' ')
-    fixed_words = []
-    for word in words:
-        has_open = '(' in word
-        has_close = ')' in word
-        clean_word = word.replace('(', '').replace(')', '').replace('[', '').replace(']', '')
-        if any(ord('א') <= ord(c) <= ord('ת') or '\u0590' <= c <= '\u05FF' for c in clean_word):
-            reversed_word = clean_word[::-1]
-        else:
-            reversed_word = clean_word
-        if has_open and has_close:
-            final_word = f"({reversed_word})"
-        elif has_open:
-            final_word = f"){reversed_word}"
-        elif has_close:
-            final_word = f"({reversed_word}"
-        else:
-            final_word = reversed_word
-        fixed_words.append(final_word)
-    return ' '.join(fixed_words[::-1])
-
-# טעינת קובץ גופן Arial ישירות מהתיקייה ב־GitHub
-PDF_FONT = "Helvetica"
-try:
-    if os.path.exists("arial.ttf"):
-        pdfmetrics.registerFont(TTFont("HebrewArial", "arial.ttf"))
-        PDF_FONT = "HebrewArial"
-except Exception:
-    pass
 
 st.markdown(
     """
@@ -141,7 +101,7 @@ st.markdown(
 )
 
 st.title("📊 מערכת ניהול תקציב, פרויקטים ודוחות")
-st.markdown("ניהול חוזים, תשלומים, יתרות, ספקים, מע\"מ (18%) והפקדת דוחות PDF/Excel.")
+st.markdown("ניהול חוזים, תשלומים, יתרות, ספקים, מע\"מ (18%) והפקת דוחות Excel מקצועיים.")
 
 EXCEL_FILE = "projects_data.xlsx"
 ORIGINAL_EXCEL = "DATE.xlsx"
@@ -411,74 +371,15 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
         c4.metric("סה\"כ רווח נקי", f"{tot_net_profit:,.0f} ₪")
 
         st.divider()
-        st.subheader("📥 ייצוא והפקדת דוחות (כלל הפרויקטים)")
-        col_dl1, col_dl2 = st.columns(2)
-
-        with col_dl1:
-            excel_data = to_excel_download({"פרויקטים": df_projects, "הוצאות": df_expenses})
-            st.download_button(
-                label="📥 הורד קובץ Excel מלא (בעברית מלאה)",
-                data=excel_data,
-                file_name="All_Projects_Report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-
-        with col_dl2:
-            def generate_general_pdf(df):
-                buffer = io.BytesIO()
-                doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-                elements = []
-                styles = getSampleStyleSheet()
-                hebrew_style = ParagraphStyle(
-                    'HebrewStyle', 
-                    parent=styles['Normal'], 
-                    fontName=PDF_FONT, 
-                    fontSize=10, 
-                    alignment=TA_RIGHT
-                )
-
-                elements.append(Paragraph(fix_hebrew("דוח סיכום עסקי כללי"), hebrew_style))
-                elements.append(Spacer(1, 10))
-
-                table_data = [[
-                    Paragraph(fix_hebrew("רווח נקי"), hebrew_style),
-                    Paragraph(fix_hebrew("הוצאות"), hebrew_style),
-                    Paragraph(fix_hebrew("חוזה"), hebrew_style),
-                    Paragraph(fix_hebrew("שם פרויקט"), hebrew_style)
-                ]]
-                
-                for _, row in df.iterrows():
-                    contract_val = row['סכום חוזה (ללא מע"מ)']
-                    exp_val = row['סה"כ הוצאות']
-                    profit_val = row['רווח נקי']
-                    table_data.append([
-                        Paragraph(f"{profit_val:,.0f}", hebrew_style),
-                        Paragraph(f"{exp_val:,.0f}", hebrew_style),
-                        Paragraph(f"{contract_val:,.0f}", hebrew_style),
-                        Paragraph(fix_hebrew(str(row["שם פרויקט"])), hebrew_style),
-                    ])
-
-                t = Table(table_data)
-                t.setStyle(TableStyle([
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                    ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
-                    ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#94a3b8")),
-                ]))
-                elements.append(t)
-                doc.build(elements)
-                buffer.seek(0)
-                return buffer.getvalue()
-
-            general_pdf_bytes = generate_general_pdf(df_summary)
-            st.download_button(
-                label="📄 הורד דוח סיכום PDF בעברית",
-                data=general_pdf_bytes,
-                file_name="Business_Summary.pdf",
-                mime="application/pdf",
-            )
+        st.subheader("📥 ייצוא דוחות עסקיים")
+        
+        excel_data = to_excel_download({"סיכום פרויקטים": df_summary, "כל ההוצאות": df_expenses})
+        st.download_button(
+            label="📥 הורד דוח Excel עסקי מלא (בעברית מושלמת)",
+            data=excel_data,
+            file_name="Business_Summary_Report.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 
         st.subheader("טבלת ריכוז פרויקטים, מכרזים ויתרות")
         
@@ -615,91 +516,17 @@ else:
                     st.success("ההוצאה נמחקה בהצלחה!")
                     st.rerun()
     else:
-        st.info("עדיין אין הוצאות רשומות בפרויקט זה.")
+        st.info("אין עדיין הוצאות רשומות בפרויקט זה.")
 
     st.divider()
 
-    st.subheader(f"📥 הפקת דוחות עבור פרויקט: {selected_project_name}")
-    col_p_dl1, col_p_dl2 = st.columns(2)
-
-    with col_p_dl1:
-        single_proj_df = df_projects[df_projects["קוד פרויקט"] == project_code]
-        single_exp_df = project_expenses.copy()
-        proj_excel_bytes = to_excel_download({"פרטי פרויקט": single_proj_df, "הוצאות פרויקט": single_exp_df})
-        st.download_button(
-            label="📥 הורד קובץ Excel לפרויקט (בעברית מלאה)",
-            data=proj_excel_bytes,
-            file_name=f"Project_{project_code}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
-    with col_p_dl2:
-        def generate_project_pdf(p_name, p_code, c_amt, paid_amt, rem_pay, tot_ex, prof, exp_df):
-            buffer = io.BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
-            elements = []
-            styles = getSampleStyleSheet()
-            hebrew_style = ParagraphStyle(
-                'HebrewStyle', 
-                parent=styles['Normal'], 
-                fontName=PDF_FONT, 
-                fontSize=11, 
-                alignment=TA_RIGHT
-            )
-
-            elements.append(Paragraph(fix_hebrew(f"דוח פרויקט: {p_name}"), hebrew_style))
-            elements.append(Spacer(1, 10))
-
-            summary_table_data = [
-                [Paragraph(f"{c_amt:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("סכום חוזה"), hebrew_style)],
-                [Paragraph(f"{paid_amt:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("תקבולים בפועל"), hebrew_style)],
-                [Paragraph(f"{rem_pay:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("יתרה לתשלום (כולל מע\"מ)"), hebrew_style)],
-                [Paragraph(f"{tot_ex:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("סה\"כ הוצאות"), hebrew_style)],
-                [Paragraph(f"{prof:,.0f} ₪", hebrew_style), Paragraph(fix_hebrew("רווח נקי"), hebrew_style)],
-            ]
-            t_sum = Table(summary_table_data)
-            t_sum.setStyle(TableStyle([
-                ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-            ]))
-            elements.append(t_sum)
-            elements.append(Spacer(1, 15))
-
-            elements.append(Paragraph(fix_hebrew("פירוט ספקים והוצאות"), hebrew_style))
-            exp_table_data = [[
-                Paragraph(fix_hebrew("סכום (ללא מע\"מ)"), hebrew_style),
-                Paragraph(fix_hebrew("ספק / תחום"), hebrew_style)
-            ]]
-            if not exp_df.empty:
-                for _, r in exp_df.iterrows():
-                    exp_table_data.append([
-                        Paragraph(f"{r['סכום']:,.0f} ₪", hebrew_style),
-                        Paragraph(fix_hebrew(str(r["ספק / תחום"])), hebrew_style)
-                    ])
-            else:
-                exp_table_data.append([
-                    Paragraph("-", hebrew_style),
-                    Paragraph(fix_hebrew("אין הוצאות רשומות"), hebrew_style)
-                ])
-
-            t_exp = Table(exp_table_data)
-            t_exp.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-                ("FONTNAME", (0, 0), (-1, -1), PDF_FONT),
-                ("GRID", (0, 0), (-1, -1), 1, colors.HexColor("#0f172a")),
-            ]))
-            elements.append(t_exp)
-            doc.build(elements)
-            buffer.seek(0)
-            return buffer.getvalue()
-
-        proj_pdf_bytes = generate_project_pdf(selected_project_name, project_code, contract_amount, already_paid, remaining_to_pay, total_exp, net_profit, project_expenses)
-        st.download_button(
-            label="📄 הורד דוח PDF לפרויקט בעברית",
-            data=proj_pdf_bytes,
-            file_name=f"Project_{project_code}.pdf",
-            mime="application/pdf",
-        )
+    st.subheader(f"📥 הפקת דוח פרויקט")
+    single_proj_df = df_projects[df_projects["קוד פרויקט"] == project_code]
+    single_exp_df = project_expenses.copy()
+    proj_excel_bytes = to_excel_download({"פרטי פרויקט": single_proj_df, "הוצאות פרויקט": single_exp_df})
+    st.download_button(
+        label="📥 הורד קובץ Excel לפרויקט (בעברית מושלמת)",
+        data=proj_excel_bytes,
+        file_name=f"Project_{project_code}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
