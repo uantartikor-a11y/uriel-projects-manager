@@ -72,7 +72,7 @@ def fix_hebrew(text):
 try:
     font_path = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Fonts\\arial.ttf")
     if not os.path.exists(font_path):
-        font_path = "arial.ttf"  # גיבוי אם הקובץ נמצא בתיקיית הענן
+        font_path = "arial.ttf"
     pdfmetrics.registerFont(TTFont("HebrewArial", font_path))
 except Exception:
     pass
@@ -431,11 +431,14 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
 
                 table_data = [[fix_hebrew("שם פרויקט"), fix_hebrew("חוזה"), fix_hebrew("הוצאות"), fix_hebrew("רווח נקי")]]
                 for _, row in df.iterrows():
+                    c_val = row['סכום חוזה (ללא מע"מ)']
+                    e_val = row['סה"כ הוצאות']
+                    n_val = row['רווח נקי']
                     table_data.append([
                         Paragraph(fix_hebrew(str(row["שם פרויקט"])), hebrew_style),
-                        Paragraph(f"{row['סכום חוזה (ללא מע\"מ)']:,.0f}", hebrew_style),
-                        Paragraph(f"{row['סה\"כ הוצאות']:,.0f}", hebrew_style),
-                        Paragraph(f"{row['רווח נקי']:,.0f}", hebrew_style),
+                        Paragraph(f"{c_val:,.0f}", hebrew_style),
+                        Paragraph(f"{e_val:,.0f}", hebrew_style),
+                        Paragraph(f"{n_val:,.0f}", hebrew_style),
                     ])
 
                 t = Table(table_data)
@@ -575,7 +578,7 @@ else:
             styles = getSampleStyleSheet()
             hebrew_style = ParagraphStyle('HebrewStyle', parent=styles['Normal'], fontName='HebrewArial', fontSize=11, alignment=2)
 
-            elements.append(Paragraph(fix_hebrew(f"דוח פרויקט: {p_name}"), hebrew_style))
+            elements.append(Paragraph(fix_hebrew("דוח פרויקט: " + p_name), hebrew_style))
             elements.append(Spacer(1, 10))
 
             summary_table_data = [
@@ -598,9 +601,11 @@ else:
             exp_table_data = [[Paragraph(fix_hebrew("סכום (ללא מע\"מ)"), hebrew_style), Paragraph(fix_hebrew("ספק / תחום"), hebrew_style)]]
             if not exp_df.empty:
                 for _, r in exp_df.iterrows():
+                    s_amt = r['סכום']
+                    s_name = str(r["ספק / תחום"])
                     exp_table_data.append([
-                        Paragraph(f"{r['סכום']:,.0f} ₪", hebrew_style),
-                        Paragraph(fix_hebrew(str(r["ספק / תחום"])), hebrew_style)
+                        Paragraph(f"{s_amt:,.0f} ₪", hebrew_style),
+                        Paragraph(fix_hebrew(s_name), hebrew_style)
                     ])
             else:
                 exp_table_data.append([
