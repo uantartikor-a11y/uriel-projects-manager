@@ -428,11 +428,14 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
 
                 table_data = [[fix_hebrew("שם פרויקט"), fix_hebrew("חוזה"), fix_hebrew("הוצאות"), fix_hebrew("רווח נקי")]]
                 for _, row in df.iterrows():
+                    contract_val = row['סכום חוזה (ללא מע"מ)']
+                    exp_val = row['סה"כ הוצאות']
+                    profit_val = row['רווח נקי']
                     table_data.append([
                         fix_hebrew(str(row["שם פרויקט"])),
-                        f"{row['סכום חוזה (ללא מע\"מ)']:,.0f}",
-                        f"{row['סה\"כ הוצאות']:,.0f}",
-                        f"{row['רווח נקי']:,.0f}",
+                        f"{contract_val:,.0f}",
+                        f"{exp_val:,.0f}",
+                        f"{profit_val:,.0f}",
                     ])
 
                 t = Table(table_data)
