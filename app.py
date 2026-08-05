@@ -102,7 +102,7 @@ st.markdown(
 )
 
 st.title("📊 מערכת ניהול תקציב, פרויקטים ודוחות")
-st.markdown("ניהול חוזים, תשלומים, יתרות, ספקים, מע\"מ (18%) והפקדת דוחות PDF/Excel.")
+st.markdown("ניהול חוזים, תשלומים, יתרות, ספקים, מע\"מ (18%) והפקת דוחות.")
 
 EXCEL_FILE = "projects_data.xlsx"
 ORIGINAL_EXCEL = "DATE.xlsx"
@@ -261,7 +261,6 @@ def to_excel_download(df_dict):
     output.seek(0)
     return output.getvalue()
 
-# פונקציית ייצור PDF מותאמת אישית באמצעות FPDF2
 class PDF(FPDF):
     def header(self):
         self.set_font("helvetica", "B", 14)
@@ -271,27 +270,31 @@ class PDF(FPDF):
 def generate_pdf_report(proj_name, c_amt, paid_amt, rem_pay, tot_ex, prof, exp_df):
     pdf = PDF()
     pdf.add_page()
-    pdf.set_font("helvetica", size=12)
+    pdf.set_font("helvetica", size=11)
     
-    pdf.cell(0, 10, f"Project: {proj_name}", 0, 1, "R")
-    pdf.cell(0, 10, f"Contract Amount: {c_amt:,.0f} NIS", 0, 1, "R")
-    pdf.cell(0, 10, f"Paid Amount: {paid_amt:,.0f} NIS", 0, 1, "R")
-    pdf.cell(0, 10, f"Remaining (Inc. VAT): {rem_pay:,.0f} NIS", 0, 1, "R")
-    pdf.cell(0, 10, f"Total Expenses: {tot_ex:,.0f} NIS", 0, 1, "R")
-    pdf.cell(0, 10, f"Net Profit: {prof:,.0f} NIS", 0, 1, "R")
+    pdf.cell(0, 8, f"Project Name: {proj_name}", 0, 1, "L")
+    pdf.cell(0, 8, f"Contract Amount: {c_amt:,.0f} NIS", 0, 1, "L")
+    pdf.cell(0, 8, f"Paid Amount: {paid_amt:,.0f} NIS", 0, 1, "L")
+    pdf.cell(0, 8, f"Remaining (Inc. VAT): {rem_pay:,.0f} NIS", 0, 1, "L")
+    pdf.cell(0, 8, f"Total Expenses: {tot_ex:,.0f} NIS", 0, 1, "L")
+    pdf.cell(0, 8, f"Net Profit: {prof:,.0f} NIS", 0, 1, "L")
     pdf.ln(10)
     
     pdf.set_font("helvetica", "B", 12)
-    pdf.cell(0, 10, "Expenses Breakdown:", 0, 1, "R")
+    pdf.cell(0, 8, "Expenses Breakdown:", 0, 1, "L")
     pdf.set_font("helvetica", size=10)
     
     if not exp_df.empty:
         for _, r in exp_df.iterrows():
-            pdf.cell(0, 8, f"{r['ספק / תחום']}: {r['סכום']:,.0f} NIS", 0, 1, "R")
+            # ניקוי בטוח של שמות הספקים למניעת בעיות קידוד
+            supplier_name = str(r['ספק / תחום']).encode('ascii', 'ignore').decode('ascii')
+            if not supplier_name:
+                supplier_name = "Supplier"
+            pdf.cell(0, 7, f"- {supplier_name}: {r['סכום']:,.0f} NIS", 0, 1, "L")
     else:
-        pdf.cell(0, 8, "No expenses recorded.", 0, 1, "R")
+        pdf.cell(0, 7, "- No expenses recorded.", 0, 1, "L")
         
-    return pdf.output()
+    return bytes(pdf.output())
 
 st.sidebar.header("📁 ניהול מערכת")
 
@@ -408,7 +411,7 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
         
         excel_data = to_excel_download({"סיכום פרויקטים": df_summary, "כל ההוצאות": df_expenses})
         st.download_button(
-            label="📥 הורד דוח Excel עסקי מלא",
+            label="📥 הורד קובץ Excel עסקי מלא",
             data=excel_data,
             file_name="Business_Summary_Report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -545,7 +548,7 @@ else:
                     df_expenses = df_expenses.drop(exp_idx)
                     with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl") as writer:
                         df_projects.to_excel(writer, sheet_name="פרויקטים", index=False)
-                        df_expenses.to_excel(writer, sheet_name="הוצאות", index=ExcelWriter if 'ExcelWriter' in globals() else "openpyxl")
+                        df_expenses.to_excel(writer, sheet_name="הוצאות", index=False)
                     st.success("ההוצאה נמחקה בהצלחה!")
                     st.rerun()
     else:
