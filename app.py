@@ -311,8 +311,8 @@ with st.sidebar.form("new_project_form"):
     st.subheader("➕ הוספת פרויקט / מכרז חדש")
     new_p_code = st.text_input("קוד פרויקט (למשל: PRJ-018)")
     new_p_name = st.text_input("שם פרויקט")
-    new_p_amount = st.number_input("סכום חוזה (ללא מע\"מ)", min_value=0.0, step=1000.0)
-    new_p_paid = st.number_input("תקבולים בפועל (ללא מע\"מ)", min_value=0.0, step=1000.0)
+    new_p_amount = st.number_input("סכום חוזה (ללא מע״מ)", min_value=0.0, step=1000.0)
+    new_p_paid = st.number_input("תקבולים בפועל (ללא מע״מ)", min_value=0.0, step=1000.0)
     new_p_status = st.selectbox(
         "סטטוס התחלתי:", ["מכרז", "בביצוע", "מעוכב", "בבדיקה", "נמסר", "סגור"]
     )
@@ -428,11 +428,14 @@ if view_mode == "📈 סיכום כללי (דשבורד עסק)":
 
                 table_data = [[fix_hebrew("שם פרויקט"), fix_hebrew("חוזה"), fix_hebrew("הוצאות"), fix_hebrew("רווח נקי")]]
                 for _, row in df.iterrows():
+                    contract_val_str = f"{row['סכום חוזה (ללא מע\"מ)']:,.0f}"
+                    exp_val_str = f"{row['סה\"כ הוצאות']:,.0f}"
+                    profit_val_str = f"{row['רווח נקי']:,.0f}"
                     table_data.append([
                         fix_hebrew(str(row["שם פרויקט"])),
-                        f"{row['סכום חוזה (ללא מע\"מ)']:,.0f}",
-                        f"{row['סה\"כ הוצאות']:,.0f}",
-                        f"{row['רווח נקי']:,.0f}",
+                        contract_val_str,
+                        exp_val_str,
+                        profit_val_str,
                     ])
 
                 t = Table(table_data)
